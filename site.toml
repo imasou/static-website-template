@@ -1,0 +1,34 @@
+# Site settings. Anything you leave out keeps its default.
+
+name = "Your Name"            # used in page titles and the feed
+description = "A short description of this site, shown in search results and link previews."
+address = "example.com"       # the large text in the top bar; it links to the home page
+status = "static"             # shown next to the address, followed by the build month and year
+url = "https://example.com/"  # public address of the site (only used for the local feed below)
+
+# Feed button in the top bar. Leave both empty to hide the button.
+feed_url = ""                 # point at a feed elsewhere, e.g. "https://blog.example.com/atom.xml"
+feed_page = ""                # or build a local atom.xml from a page in content/, e.g. "notes"
+
+inline_css = true             # copy style.css into every page (fewer requests, no unstyled flash)
+pdf_preview = "viewer"        # "viewer" = the browser's PDF viewer, "images" = pages rendered at build time
+preload_fonts = [             # fonts in static/fonts/ that are used above the fold
+  "im-fell-english-latin-400-normal.woff2",
+  "im-fell-english-latin-400-italic.woff2",
+  "jetbrains-mono-latin-400-normal.woff2",
+]
+
+# Optional extra link at the end of the page list, for another site of yours.
+# Delete this table to remove it.
+[other_site]
+label = "blog"
+url = "https://blog.example.com"
+
+# Pages: each needs content/<file>.md. The first entry must be "index" (the home page).
+[[pages]]
+file = "index"
+label = "about"
+
+[[pages]]
+file = "notes"
+label = "notes"
