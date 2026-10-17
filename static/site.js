@@ -79,7 +79,7 @@
     ["pointerdown", "touchstart", "keydown"].forEach((ev) =>
       side.addEventListener(ev, () => { cancelSpring(); clearTimeout(timer); }, { passive: true }));
 
-    const settle = () => { if (!narrow.matches) setTop(rest()); };
+    const settle = () => { if (narrow.matches) side.scrollTop = 0; else setTop(rest()); };
     settle();
     addEventListener("load", settle);
     addEventListener("resize", settle);
@@ -88,12 +88,29 @@
   // 3. highlight the section you are reading in the left list
   const links = [...document.querySelectorAll(".sections a")];
   const targets = links.map((a) => document.getElementById(decodeURIComponent(a.hash.slice(1))));
-  let queued = false;
+  let queued = false, shown = -1, touched = -Infinity;
+  // on narrow screens the lists are sideways-scrolling rows: slide the row so this link is in view
+  const reveal = (a, smooth = true) => {
+    const row = a && a.closest(".side");
+    if (!row || !narrow.matches || performance.now() - touched < 1500) return;
+    const left = a.offsetLeft - (row.clientWidth - a.offsetWidth) / 2;
+    row.scrollTo({ left: Math.max(0, left), behavior: smooth && !calm.matches ? "smooth" : "instant" });
+  };
+  document.querySelectorAll(".side").forEach((row) =>
+    ["touchstart", "pointerdown", "wheel"].forEach((ev) =>
+      row.addEventListener(ev, () => { touched = performance.now(); }, { passive: true })));
+  addEventListener("load", () => {
+    const here = document.querySelector('.pages a[aria-current]');
+    if (here) reveal(here, false);   // the page you are on, in the page row
+  });
   const spy = () => {
     queued = false;
     if (!links.length) return;
     const bar = document.querySelector(".bar");
-    const top = bar ? bar.offsetHeight : 0;
+    let top = bar ? bar.offsetHeight : 0;
+    if (narrow.matches) {   // the lists are pinned rows under the bar: read below the lowest one
+      document.querySelectorAll(".side").forEach((s) => { top += s.offsetHeight; });
+    }
     const line = top + (innerHeight - top) * 0.3;
     let cur = 0;
     targets.forEach((t, i) => { if (t && t.getBoundingClientRect().top <= line) cur = i; });
@@ -103,6 +120,7 @@
       if (i === cur) a.setAttribute("aria-current", "location");
       else a.removeAttribute("aria-current");
     });
+    if (cur !== shown) { shown = cur; reveal(links[cur]); }
   };
   const queue = () => { if (!queued) { queued = true; requestAnimationFrame(spy); } };
   addEventListener("scroll", queue, { passive: true });
@@ -110,6 +128,27 @@
   addEventListener("load", queue);
   document.addEventListener("toggle", queue, true);   // opening or closing a section moves things
   spy();
+
+  // 3b. narrow screens: the pinned rows slide away while you scroll down and return as soon as you scroll up
+  {
+    const root = document.documentElement;
+    let lastY = scrollY, run = 0, hold = 0;
+    const away = (on) => root.classList.toggle("rows-away", on);
+    const keep = () => { hold = performance.now() + 1500; run = 0; away(false); };   // e.g. after tapping a link
+    addEventListener("scroll", () => {
+      const y = Math.max(0, scrollY), dy = y - lastY;
+      lastY = y;
+      if (!narrow.matches || y < 100 || performance.now() < hold) { run = 0; away(false); return; }
+      if (dy > 0) { run = run > 0 ? run + dy : dy; if (run > 12) away(true); }
+      else if (dy < 0) { run = run < 0 ? run + dy : dy; if (run < -6) away(false); }
+    }, { passive: true });
+    document.querySelectorAll(".side").forEach((row) => {
+      row.addEventListener("click", keep);
+      row.addEventListener("focusin", () => away(false));   // keyboard users can always reach them
+    });
+    addEventListener("hashchange", keep);
+    narrow.addEventListener("change", () => away(false));
+  }
 
   // 4. jumping to a collapsed section from the left list opens it
   const openFor = (id) => {

@@ -254,6 +254,26 @@ class Site:
                 inner = (f'<object data="{src}#toolbar=0&amp;navpanes=0&amp;view=FitH" '
                          f'type="application/pdf" aria-label="{html.escape(label)}">'
                          f'<p><a href="{src}">Open {html.escape(pdf.name)}</a></p></object>')
+                # Phones can't show <object> PDFs, so also write the pages as image files; CSS shows
+                # them on narrow screens only (lazy-loaded, so desktop never downloads them).
+                try:
+                    names = self._render_pdf(pdf) if pdf.exists() else []
+                except Exception as exc:   # a bad PDF or renderer must not break the build
+                    print(f"! could not render {pdf.name} for phones ({exc.__class__.__name__}); viewer only")
+                    names = []
+                if names:
+                    dest = self.out / "preview"
+                    dest.mkdir(exist_ok=True)
+                    tags = []
+                    for i, name in enumerate(names, 1):
+                        png = self.cache / "preview" / name
+                        shutil.copyfile(png, dest / name)
+                        w, h = png_size(png)
+                        tags.append(f'<a href="{src}"><img src="preview/{name}" width="{w}" height="{h}" '
+                                    f'loading="lazy" decoding="async" alt="{html.escape(pdf.name)}, page {i}"></a>')
+                    return (f'<details class="preview" open>\n<summary>{html.escape(label)}</summary>\n'
+                            f'<div class="pdf pdf-viewer">\n{inner}\n</div>\n'
+                            f'<div class="pdf pdf-images">\n' + "\n".join(tags) + '\n</div>\n</details>')
             return (f'<details class="preview" open>\n<summary>{html.escape(label)}</summary>\n'
                     f'<div class="pdf">\n{inner}\n</div>\n</details>')
         return re.sub(r'<p><img alt="([^"]*)" src="([^"]+\.pdf)" ?/></p>', repl, body)

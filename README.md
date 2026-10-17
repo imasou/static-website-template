@@ -10,7 +10,11 @@ and no third-party requests.
 - Dark and light themes with a toggle (the choice stays in the visitor's browser)
 - Every section collapses, and a floating list on the left tracks where you are on the page
 - A second floating list on the right for the site's pages, plus an optional link to another site
-- Embedded PDF preview, for a resume or any other document
+- On phones and narrow windows both lists become slim rows pinned under the top bar, so they stay
+  reachable while you scroll; swipe a row sideways to see the rest, and the row follows your reading.
+  They slide up out of the way while you scroll down and slide back as soon as you scroll up
+- PDF preview for a resume or any other document: the browser's viewer on desktop, page images on
+  phones (rendered at build time)
 - Optional Atom feed button (point it at another site's feed, or build one from a page)
 - Soft fade between pages, honouring the visitor's "reduce motion" setting
 - Works without JavaScript (the toggle, highlights and fades are progressive enhancements) and
@@ -58,7 +62,7 @@ Everything lives in `site.toml`. Anything you leave out keeps its default.
 | `feed_url` | where the `feed` button points, e.g. another site's feed. Empty hides it |
 | `feed_page` | build a local `atom.xml` from this page in `content/` (see "Feed") |
 | `inline_css` | copy `style.css` into every page (fewer requests, no unstyled flash) |
-| `pdf_preview` | `"viewer"` (browser's PDF viewer) or `"images"` (pages rendered at build time) |
+| `pdf_preview` | `"viewer"` (browser's PDF viewer on desktop, page images on narrow screens) or `"images"` (page images everywhere, embedded in the HTML) |
 | `preload_fonts` | font files in `static/fonts/` used above the fold, fetched early |
 | `[other_site]` | optional link at the end of the page list: `label` and `url` |
 | `[[pages]]` | the pages, in order: `file` (matches `content/<file>.md`) and `label`. The first must be `index` |
@@ -122,7 +126,9 @@ Clean URLs use absolute paths (`/notes`), so use them only when the site is serv
 its own domain or subdomain. The default `notes.html` links are relative and work anywhere,
 including in a subfolder.
 
-For `pdf_preview = "images"`, install poppler (`pdftoppm`) or `pip install pymupdf`.
+The phone fallback (and `"images"` mode) needs the PDF in `static/` and a renderer: `pymupdf` is in `requirements.txt`, so `pip install -r requirements.txt` is enough (poppler's
+`pdftoppm` is used instead if it is installed). If the PDF or a renderer is missing, the build keeps only the
+browser's viewer (and prints a warning), which does not work on most phones.
 
 ## Deploying
 
@@ -185,8 +191,8 @@ bounce on the lists, and the fade when leaving a page.
 
 - Everything is progressive: without JavaScript you lose the toggle, highlights and bounce, not content.
 - Visitors with "reduce motion" enabled get no fades or bounce.
-- The PDF preview uses the browser's built-in viewer. Some mobile browsers show only the first page
-  or nothing, so the `download` link above it is the fallback.
+- With `pdf_preview = "viewer"`, screens up to 64rem wide get the page images (tap one to open the PDF) and wider
+  screens get the browser's viewer. Keep the `download` link above it as a fallback.
 
 ## Privacy
 
@@ -200,8 +206,9 @@ with `noopener noreferrer`.
   files directly, and prefer a real host, which caches pages and fonts.
 - **`/notes` gives "not found" on a host:** the host does not map extensionless URLs. Build without
   `--clean-urls`.
-- **The resume preview is blank:** check that `static/resume.pdf` exists and the Markdown refers to
-  it by that file name, or switch `pdf_preview` to `"images"`.
+- **The resume preview is blank (especially on a phone):** check that
+  `static/resume.pdf` exists and the Markdown refers to it by that file name, and look for a
+  `no PDF renderer found` line in the build output.
 - **Fonts show in a fallback face:** the files in `static/fonts/` must match the names in
   `style.css` and `preload_fonts`.
 
